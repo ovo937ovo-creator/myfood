@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>🍭 我们的美食小组</title>
-    <!-- 引入工具库 -->
+    <!-- 引入必要的工具库 -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
@@ -18,13 +18,13 @@
         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow-x: hidden; touch-action: manipulation; }
         #app { max-width: 450px; margin: 0 auto; padding: 20px; box-sizing: border-box; }
         
-        /* 按钮与通用样式 */
+        /* 基础 UI 样式 */
         .btn { border: none; border-radius: 25px; padding: 12px 20px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .btn:active { transform: scale(0.95); }
-        .card { background: #fff; border-radius: 35px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); padding: 20px; margin: 15px 0; border: 5px solid var(--m-yellow); position: relative;}
+        .card { background: #fff; border-radius: 35px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); padding: 20px; margin: 15px 0; border: 5px solid var(--m-yellow); position: relative; animation: fadeIn 0.4s; }
         
-        /* 登录与入口 */
-        .login-box { text-align: center; margin-top: 50px; animation: fadeIn 0.5s; }
+        /* 登录页 */
+        .login-box { text-align: center; margin-top: 50px; }
         .avatar-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 15px 0; }
         .avatar { width: 50px; height: 50px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; font-size: 30px; display: flex; align-items: center; justify-content: center; background: #eee; }
         .avatar.active { border-color: var(--m-pink); background: var(--m-yellow); }
@@ -35,17 +35,16 @@
         .cooling { filter: grayscale(1); opacity: 0.6; }
         .cooling::after { content: "❄️ 冷却中"; position: absolute; top: 10px; right: 20px; color: #999; font-size: 12px; font-weight: bold; }
 
-        /* 筛选器与标签 */
+        /* 筛选器 */
         .filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
         .tag { background: #eee; padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; }
         .tag.active { background: var(--m-blue); color: white; }
 
-        /* 菜品展示 */
+        /* 菜单展示 */
         .dish-item { padding: 10px; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center; }
-        .highlight { background: var(--m-yellow); border-radius: 12px; font-weight: bold; transform: scale(1.05); }
+        .highlight { background: var(--m-yellow); border-radius: 12px; font-weight: bold; }
 
         input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 20px; border: 2px solid #eee; box-sizing: border-box; outline: none; font-size: 16px; }
-        input:focus { border-color: var(--m-pink); }
         
         [v-cloak] { display: none; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
@@ -54,82 +53,70 @@
 <body>
 
 <div id="app" v-cloak>
-    <!-- 第一阶段：小组入口与个人设定 -->
+    <!-- 第一页：登录 -->
     <div v-if="page === 'login'" class="login-box">
         <h1 style="color: var(--m-pink);">🍡 美食小组入口</h1>
-        <input type="text" v-model="groupCode" placeholder="输入小组暗号 (如：我们的午餐)">
-        <p style="margin-top:20px">选择你的专属形象：</p>
+        <input type="text" v-model="groupCode" placeholder="输入小组暗号">
         <div class="avatar-pick">
             <div v-for="a in avatars" :key="a" class="avatar" :class="{active: myAvatar === a}" @click="myAvatar = a">{{a}}</div>
         </div>
         <input type="text" v-model="myName" placeholder="你的昵称">
-        <button class="btn" style="background:var(--m-pink); width:100%; color:white; font-size: 18px; margin-top:20px" @click="enterGroup">进入美食世界</button>
+        <button class="btn" style="background:var(--m-pink); width:100%; color:white;" @click="enterGroup">进入美食世界</button>
     </div>
 
-    <!-- 第二阶段：随机抽取主界面 -->
-    <div v-if="page === 'main'" style="animation: fadeIn 0.4s">
+    <!-- 第二页：主界面 -->
+    <div v-if="page === 'main'">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 14px; background: #fff; padding: 5px 12px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
-                {{myAvatar}} {{myName}} ({{groupCode}})
-            </span>
+            <span>{{myAvatar}} {{myName}} ({{groupCode}})</span>
             <button class="btn" style="background:var(--m-green); padding: 8px 15px;" @click="page='manage'">⚙️ 管理清单</button>
         </div>
 
-        <h2 style="text-align: center; color:var(--m-pink); margin: 25px 0 15px 0;">🍱 今天吃什么？</h2>
+        <h2 style="text-align: center; color:var(--m-pink);">🍱 今天吃什么？</h2>
 
-        <!-- 多选口味与价格筛选 -->
         <div class="filters">
             <div v-for="t in allTastes" :class="['tag', filterTastes.includes(t)?'active':'']" @click="toggleTaste(t)">{{t}}</div>
-            <div class="tag" style="background: var(--m-yellow)">预算: {{maxPrice}}元内</div>
+            <div class="tag" style="background: var(--m-yellow)">预算: {{maxPrice}}元</div>
         </div>
-        <input type="range" min="10" max="200" step="5" v-model="maxPrice" style="accent-color: var(--m-pink);">
+        <input type="range" min="10" max="200" step="5" v-model="maxPrice" style="width:100%">
 
-        <!-- Tinder 卡片区域 -->
         <div id="tinder-stage">
-            <div v-if="loading" style="text-align: center; padding-top: 120px; color:#bbb;">正在从云端加载...</div>
+            <div v-if="loading" style="text-align: center; padding-top: 120px; color:#bbb;">正在连接云端...</div>
             <div v-else-if="currentStore" class="tinder-card" id="active-card" :class="{cooling: isCooling(currentStore)}">
-                <h1 style="margin-bottom: 5px; font-size: 32px;">{{currentStore.name}}</h1>
-                <p style="color: #999; font-size: 14px;">📍 {{currentStore.location.substring(0,20)}}</p>
-                <div v-if="!isCooling(currentStore)" style="color:var(--m-pink); font-weight: bold; margin-top: 20px;">⬅️ 左划换一个 | 右划看菜单 ➡️</div>
-                <div v-else style="color:#999; margin-top: 20px;">❄️ 正在冷静期，划走吧</div>
+                <h1>{{currentStore.name}}</h1>
+                <p style="color: #999;">📍 {{currentStore.location}}</p>
+                <div v-if="!isCooling(currentStore)" style="color:var(--m-pink); font-weight: bold;">⬅️ 左划换一个 | 右划确定 ➡️</div>
+                <div v-else style="color:#999">❄️ 冷静期内</div>
             </div>
-            <div v-else style="text-align: center; padding-top: 100px; color:#ccc;">
-                还没有店？快去管理页面导入 Excel 吧！
-            </div>
+            <div v-else style="text-align: center; padding-top: 100px; color:#ccc;">暂无匹配，请先导入数据</div>
         </div>
 
-        <!-- 抽中结果：菜品展示 -->
-        <div v-if="showDishes" class="card" style="animation: fadeIn 0.3s">
-            <h3 style="margin: 0 0 15px 0; text-align: center;">🎉 选中啦！建议吃：</h3>
+        <div v-if="showDishes" class="card">
+            <h3 style="text-align: center;">🎉 选中啦！快看招牌：</h3>
             <div v-for="(d, i) in currentDishes" :key="i" :class="['dish-item', i === luckyDishIndex ? 'highlight':'']">
                 <span>{{d.name}}</span>
                 <span style="color: var(--m-pink); font-weight: bold;">￥{{d.price}}</span>
             </div>
-            <button class="btn" style="background:var(--m-pink); width:100%; color:white; font-size: 18px; margin-top:20px" @click="eatThis">就吃这家，开启冷却！</button>
+            <button class="btn" style="background:var(--m-pink); width:100%; color:white; margin-top:15px" @click="eatThis">就吃这家啦！</button>
         </div>
     </div>
 
-    <!-- 第三阶段：管理与批量导入 -->
-    <div v-if="page === 'manage'" style="animation: fadeIn 0.4s">
-        <button class="btn" style="background:#eee; margin-bottom: 20px;" @click="page='main'">⬅️ 返回随机</button>
-        
-        <div class="card" style="border-color: var(--m-blue);">
+    <!-- 第三页：管理 -->
+    <div v-if="page === 'manage'">
+        <button class="btn" style="background:#eee; margin-bottom: 20px;" @click="page='main'">⬅️ 返回</button>
+        <div class="card">
             <h3 style="margin-top:0">📊 批量导入 Excel</h3>
-            <p style="font-size: 12px; color: #999;">请上传格式为：店名 | 菜品 | 价格 | 口味 | 位置 的表格</p>
             <input type="file" @change="handleExcel" accept=".xlsx, .xls">
         </div>
-
-        <h3>📝 当前店铺清单 ({{stores.length}})</h3>
-        <div v-for="s in stores" :key="s.id" class="card" style="padding:15px; border-radius: 20px; border-width: 2px;">
-            <b style="font-size: 18px;">{{s.name}}</b>
-            <div style="font-size: 12px; color:#999; margin-top:5px;">{{s.location}}</div>
-            <button @click="deleteStore(s.name)" style="position:absolute; right:20px; top:20px; color:#ff4757; border:none; background:none; font-weight:bold;">删除</button>
+        <h3>📝 现存店铺 ({{stores.length}})</h3>
+        <div v-for="s in stores" :key="s.id" class="card" style="padding:15px; border-radius: 20px;">
+            <b>{{s.name}}</b>
+            <button @click="deleteStore(s.name)" style="float:right; color:red; border:none; background:none;">删除</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- 自动填写的 Supabase 凭证 ---
+    // --- 已为你填写好的 Supabase 凭证 ---
     const SUPABASE_URL = 'https://itebzgccIuqfxwpehmwp.supabase.co';
     const SUPABASE_KEY = 'sb_publishable_EX7F-J9H9Tw-y11kWoX0kQ_oLJcZqp1';
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -137,21 +124,11 @@
     new Vue({
         el: '#app',
         data: {
-            page: 'login',
-            groupCode: localStorage.getItem('lastGroup') || '',
-            myName: localStorage.getItem('myName') || '',
-            myAvatar: '🐱',
+            page: 'login', groupCode: localStorage.getItem('lastGroup') || '',
+            myName: localStorage.getItem('myName') || '', myAvatar: '🐱',
             avatars: ['🐱','🐶','🐰','🦊','🐼','🐨','🐷','🦁','🐸','🐹'],
-            maxPrice: 80,
-            allTastes: ['清淡','酸甜','麻辣','其他'],
-            filterTastes: [],
-            stores: [],
-            dishes: [],
-            currentStore: null,
-            showDishes: false,
-            currentDishes: [],
-            luckyDishIndex: -1,
-            loading: false
+            maxPrice: 80, allTastes: ['清淡','酸甜','麻辣','其他'], filterTastes: [],
+            stores: [], dishes: [], currentStore: null, showDishes: false, currentDishes: [], luckyDishIndex: -1, loading: false
         },
         methods: {
             async enterGroup() {
@@ -165,33 +142,27 @@
                 this.$nextTick(() => this.initHammer());
             },
             async loadData() {
-                // 从云端获取店铺和菜品
-                const { data: sData } = await _supabase.from('stores').select('*').eq('group_code', this.groupCode);
-                const { data: dData } = await _supabase.from('dishes').select('*').eq('group_code', this.groupCode);
-                this.stores = sData || [];
-                this.dishes = dData || [];
-                this.pickNextStore();
+                try {
+                    const { data: sData, error: sErr } = await _supabase.from('stores').select('*').eq('group_code', this.groupCode);
+                    const { data: dData, error: dErr } = await _supabase.from('dishes').select('*').eq('group_code', this.groupCode);
+                    if(sErr || dErr) throw (sErr || dErr);
+                    this.stores = sData || [];
+                    this.dishes = dData || [];
+                    this.pickNextStore();
+                } catch (e) {
+                    alert("⚠️ 无法连接数据库，请检查网络或确认数据库 RLS 已关闭。");
+                    console.error(e);
+                }
             },
             pickNextStore() {
                 this.showDishes = false;
-                // 筛选逻辑
                 const filtered = this.stores.filter(s => {
                     const sDishes = this.dishes.filter(d => d.store_name === s.name);
                     const matchPrice = sDishes.some(d => d.price <= this.maxPrice);
                     const matchTaste = this.filterTastes.length === 0 || sDishes.some(d => this.filterTastes.includes(d.taste));
                     return matchPrice && matchTaste;
                 });
-                
-                if (filtered.length === 0) {
-                    this.currentStore = null;
-                } else {
-                    // 随机选一家，尽量不选到刚抽中过的
-                    let next;
-                    do {
-                        next = filtered[Math.floor(Math.random() * filtered.length)];
-                    } while (filtered.length > 1 && this.currentStore && next.name === this.currentStore.name);
-                    this.currentStore = next;
-                }
+                this.currentStore = filtered[Math.floor(Math.random() * filtered.length)] || null;
             },
             initHammer() {
                 const el = document.getElementById('active-card');
@@ -206,38 +177,27 @@
                     if(ev.deltaX > 140) { // 右滑确认
                         el.style.transform = 'translateX(500px) rotate(30deg)';
                         this.handleSelect();
-                    } else if(ev.deltaX < -140) { // 左滑换一个
+                    } else if(ev.deltaX < -140) { // 左滑下一个
                         el.style.transform = 'translateX(-500px) rotate(-30deg)';
                         setTimeout(() => { this.pickNextStore(); el.style.transform = 'none'; }, 300);
-                    } else {
-                        el.style.transform = 'none';
-                    }
+                    } else { el.style.transform = 'none'; }
                 });
             },
             handleSelect() {
-                // 获取该店菜品并随机高亮一个
                 this.currentDishes = this.dishes.filter(d => d.store_name === this.currentStore.name);
                 this.luckyDishIndex = Math.floor(Math.random() * this.currentDishes.length);
                 this.showDishes = true;
-                // 地图跳转
                 const url = `https://www.amap.com/search?query=${encodeURIComponent(this.currentStore.name)}`;
-                setTimeout(() => {
-                    if(confirm("店选好啦！要去看看地图怎么走吗？")) window.open(url);
-                }, 400);
+                setTimeout(() => { if(confirm("要去看看地图怎么走吗？")) window.open(url); }, 400);
             },
             async eatThis() {
-                // 更新冷却时间
                 const { error } = await _supabase.from('stores').update({ last_eaten: new Date() }).eq('name', this.currentStore.name).eq('group_code', this.groupCode);
-                if(error) alert("保存失败，请检查网络");
-                else {
-                    alert("祝你用餐愉快！这家店将进入3天冷却期。");
-                    location.reload(); // 刷新以更新状态
-                }
+                if(error) alert("保存失败");
+                else { alert("祝用餐愉快！进入3天冷却期。"); location.reload(); }
             },
             isCooling(s) {
                 if(!s.last_eaten) return false;
-                const diff = (new Date() - new Date(s.last_eaten)) / (1000 * 60 * 60 * 24);
-                return diff < 3;
+                return (new Date() - new Date(s.last_eaten)) / (1000 * 60 * 60 * 24) < 3;
             },
             toggleTaste(t) {
                 const idx = this.filterTastes.indexOf(t);
@@ -249,32 +209,32 @@
                 const file = e.target.files[0];
                 const reader = new FileReader();
                 reader.onload = async (ev) => {
-                    const data = ev.target.result;
-                    const workbook = XLSX.read(data, {type: 'binary'});
-                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
-                    
-                    rows.shift(); // 移除第一行表头
-                    this.loading = true;
-                    for(let row of rows) {
-                        const [sName, dName, price, taste, loc] = row;
-                        if(!sName) continue;
-                        
-                        // 1. 存店铺 (如果不存在)
-                        const exist = this.stores.find(s => s.name === sName);
-                        if(!exist) {
-                            await _supabase.from('stores').insert([{name: sName, location: loc||'附近', group_code: this.groupCode}]);
+                    try {
+                        const workbook = XLSX.read(ev.target.result, {type: 'binary'});
+                        const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
+                        rows.shift();
+                        this.loading = true;
+                        let ok = 0, err = 0;
+                        for(let row of rows) {
+                            const [sName, dName, price, taste, loc] = row;
+                            if(!sName) continue;
+                            const { data: exist } = await _supabase.from('stores').select('*').eq('name', sName).eq('group_code', this.groupCode);
+                            if(!exist || exist.length === 0) {
+                                const { error } = await _supabase.from('stores').insert([{name: sName, location: loc||'附近', group_code: this.groupCode}]);
+                                if(error) { err++; continue; }
+                            }
+                            const { error: dErr } = await _supabase.from('dishes').insert([{name: dName, price: parseInt(price)||0, taste: taste||'其他', store_name: sName, group_code: this.groupCode}]);
+                            if(dErr) err++; else ok++;
                         }
-                        // 2. 存菜品
-                        await _supabase.from('dishes').insert([{name: dName, price: parseInt(price)||0, taste: taste||'其他', store_name: sName, group_code: this.groupCode}]);
-                    }
-                    alert("全部美食导入成功！");
-                    this.loadData();
-                    this.loading = false;
+                        this.loading = false;
+                        if(ok > 0) { alert(`导入完成！成功: ${ok} 条, 失败: ${err} 条`); this.loadData(); }
+                        else { alert("🚨 全部失败！请在手机上使用数据流量重试，并检查 RLS 是否已关闭。"); }
+                    } catch (err) { alert("文件解析失败"); this.loading = false; }
                 };
                 reader.readAsBinaryString(file);
             },
             async deleteStore(name) {
-                if(!confirm(`确定要彻底删除“${name}”的所有信息吗？`)) return;
+                if(!confirm(`确定删除“${name}”吗？`)) return;
                 await _supabase.from('stores').delete().eq('name', name).eq('group_code', this.groupCode);
                 await _supabase.from('dishes').delete().eq('store_name', name).eq('group_code', this.groupCode);
                 this.loadData();
