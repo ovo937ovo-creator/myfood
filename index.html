@@ -3,181 +3,284 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🎀 今天吃什么 🎀</title>
+    <title>🍭 我们的美食小组</title>
+    <!-- 引入工具库 -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+
     <style>
         :root {
-            --bg-color: #fffaf0;
-            --card-bg: #ffffff;
-            --primary-pink: #ffadad;
-            --primary-blue: #a0c4ff;
-            --primary-yellow: #fdffb6;
-            --text-color: #6d6d6d;
+            --m-pink: #ffadad; --m-blue: #a0c4ff; --m-yellow: #fdffb6;
+            --m-green: #caffbf; --bg: #fffaf0; --text: #6d6d6d;
         }
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow-x: hidden; touch-action: manipulation; }
+        #app { max-width: 450px; margin: 0 auto; padding: 20px; box-sizing: border-box; }
+        
+        /* 按钮与通用样式 */
+        .btn { border: none; border-radius: 25px; padding: 12px 20px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
+        .btn:active { transform: scale(0.95); }
+        .card { background: #fff; border-radius: 35px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); padding: 20px; margin: 15px 0; border: 5px solid var(--m-yellow); position: relative;}
+        
+        /* 登录与入口 */
+        .login-box { text-align: center; margin-top: 50px; animation: fadeIn 0.5s; }
+        .avatar-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 15px 0; }
+        .avatar { width: 50px; height: 50px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; font-size: 30px; display: flex; align-items: center; justify-content: center; background: #eee; }
+        .avatar.active { border-color: var(--m-pink); background: var(--m-yellow); }
 
-        body {
-            font-family: 'PingFang SC', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-        }
+        /* Tinder 卡片 */
+        #tinder-stage { height: 350px; position: relative; perspective: 1000px; margin: 20px 0; width: 100%; }
+        .tinder-card { width: 100%; height: 100%; position: absolute; background: white; border-radius: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 8px solid var(--m-pink); box-sizing: border-box; touch-action: none; z-index: 10; transition: transform 0.1s; }
+        .cooling { filter: grayscale(1); opacity: 0.6; }
+        .cooling::after { content: "❄️ 冷却中"; position: absolute; top: 10px; right: 20px; color: #999; font-size: 12px; font-weight: bold; }
 
-        #app {
-            width: 100%;
-            max-width: 450px;
-            padding: 20px;
-            text-align: center;
-            display: block !important; /* 确保可见 */
-        }
+        /* 筛选器与标签 */
+        .filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
+        .tag { background: #eee; padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; }
+        .tag.active { background: var(--m-blue); color: white; }
 
-        h1 { color: var(--primary-pink); font-size: 24px; }
+        /* 菜品展示 */
+        .dish-item { padding: 10px; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center; }
+        .highlight { background: var(--m-yellow); border-radius: 12px; font-weight: bold; transform: scale(1.05); }
 
-        .filter-box {
-            background: #fff;
-            padding: 15px;
-            border-radius: 25px;
-            margin-bottom: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-
-        .card-container {
-            width: 100%;
-            height: 300px;
-            position: relative;
-            margin: 20px 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .food-card {
-            width: 280px;
-            height: 100%;
-            background: var(--card-bg);
-            border-radius: 40px;
-            padding: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-            position: absolute;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            border: 6px solid var(--primary-yellow);
-            z-index: 10;
-        }
-
-        .input-area {
-            background: #fff;
-            border-radius: 30px;
-            padding: 20px;
-            margin-top: 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.05);
-        }
-
-        input {
-            width: 100%;
-            padding: 12px;
-            margin: 8px 0;
-            border-radius: 15px;
-            border: 1px solid #eee;
-            box-sizing: border-box;
-        }
-
-        .btn {
-            border: none;
-            border-radius: 20px;
-            padding: 12px 25px;
-            font-weight: bold;
-            cursor: pointer;
-            width: 100%;
-            margin: 10px 0;
-        }
-        .btn-main { background: var(--primary-pink); color: white; font-size: 18px; }
-        .btn-add { background: var(--primary-blue); color: white; }
+        input { width: 100%; padding: 15px; margin: 10px 0; border-radius: 20px; border: 2px solid #eee; box-sizing: border-box; outline: none; font-size: 16px; }
+        input:focus { border-color: var(--m-pink); }
+        
+        [v-cloak] { display: none; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body>
 
-<div id="app">
-    <h1>🎀 今天吃什么 🎀</h1>
-
-    <div class="filter-box">
-        预算：<span id="priceLabel">50</span> 元以内
-        <input type="range" id="priceRange" min="10" max="200" step="5" value="50" style="width:100%" oninput="document.getElementById('priceLabel').innerText=this.value">
+<div id="app" v-cloak>
+    <!-- 第一阶段：小组入口与个人设定 -->
+    <div v-if="page === 'login'" class="login-box">
+        <h1 style="color: var(--m-pink);">🍡 美食小组入口</h1>
+        <input type="text" v-model="groupCode" placeholder="输入小组暗号 (如：我们的午餐)">
+        <p style="margin-top:20px">选择你的专属形象：</p>
+        <div class="avatar-pick">
+            <div v-for="a in avatars" :key="a" class="avatar" :class="{active: myAvatar === a}" @click="myAvatar = a">{{a}}</div>
+        </div>
+        <input type="text" v-model="myName" placeholder="你的昵称">
+        <button class="btn" style="background:var(--m-pink); width:100%; color:white; font-size: 18px; margin-top:20px" @click="enterGroup">进入美食世界</button>
     </div>
 
-    <button class="btn btn-main" onclick="initCard()">开始随机抽取</button>
+    <!-- 第二阶段：随机抽取主界面 -->
+    <div v-if="page === 'main'" style="animation: fadeIn 0.4s">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 14px; background: #fff; padding: 5px 12px; border-radius: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05);">
+                {{myAvatar}} {{myName}} ({{groupCode}})
+            </span>
+            <button class="btn" style="background:var(--m-green); padding: 8px 15px;" @click="page='manage'">⚙️ 管理清单</button>
+        </div>
 
-    <div class="card-container" id="container">
-        <div id="emptyTip" style="color:#ccc;">👈 下方先录入店名哦</div>
+        <h2 style="text-align: center; color:var(--m-pink); margin: 25px 0 15px 0;">🍱 今天吃什么？</h2>
+
+        <!-- 多选口味与价格筛选 -->
+        <div class="filters">
+            <div v-for="t in allTastes" :class="['tag', filterTastes.includes(t)?'active':'']" @click="toggleTaste(t)">{{t}}</div>
+            <div class="tag" style="background: var(--m-yellow)">预算: {{maxPrice}}元内</div>
+        </div>
+        <input type="range" min="10" max="200" step="5" v-model="maxPrice" style="accent-color: var(--m-pink);">
+
+        <!-- Tinder 卡片区域 -->
+        <div id="tinder-stage">
+            <div v-if="loading" style="text-align: center; padding-top: 120px; color:#bbb;">正在从云端加载...</div>
+            <div v-else-if="currentStore" class="tinder-card" id="active-card" :class="{cooling: isCooling(currentStore)}">
+                <h1 style="margin-bottom: 5px; font-size: 32px;">{{currentStore.name}}</h1>
+                <p style="color: #999; font-size: 14px;">📍 {{currentStore.location.substring(0,20)}}</p>
+                <div v-if="!isCooling(currentStore)" style="color:var(--m-pink); font-weight: bold; margin-top: 20px;">⬅️ 左划换一个 | 右划看菜单 ➡️</div>
+                <div v-else style="color:#999; margin-top: 20px;">❄️ 正在冷静期，划走吧</div>
+            </div>
+            <div v-else style="text-align: center; padding-top: 100px; color:#ccc;">
+                还没有店？快去管理页面导入 Excel 吧！
+            </div>
+        </div>
+
+        <!-- 抽中结果：菜品展示 -->
+        <div v-if="showDishes" class="card" style="animation: fadeIn 0.3s">
+            <h3 style="margin: 0 0 15px 0; text-align: center;">🎉 选中啦！建议吃：</h3>
+            <div v-for="(d, i) in currentDishes" :key="i" :class="['dish-item', i === luckyDishIndex ? 'highlight':'']">
+                <span>{{d.name}}</span>
+                <span style="color: var(--m-pink); font-weight: bold;">￥{{d.price}}</span>
+            </div>
+            <button class="btn" style="background:var(--m-pink); width:100%; color:white; font-size: 18px; margin-top:20px" @click="eatThis">就吃这家，开启冷却！</button>
+        </div>
     </div>
 
-    <div class="input-area">
-        <h3 style="margin:0">🍭 录入美食</h3>
-        <input type="text" id="inStore" placeholder="店名">
-        <input type="text" id="inDish" placeholder="推荐菜">
-        <input type="number" id="inPrice" placeholder="人均价格">
-        <input type="text" id="inLoc" placeholder="地图链接或位置">
-        <button class="btn btn-add" onclick="addFood()">存入我的清单</button>
+    <!-- 第三阶段：管理与批量导入 -->
+    <div v-if="page === 'manage'" style="animation: fadeIn 0.4s">
+        <button class="btn" style="background:#eee; margin-bottom: 20px;" @click="page='main'">⬅️ 返回随机</button>
+        
+        <div class="card" style="border-color: var(--m-blue);">
+            <h3 style="margin-top:0">📊 批量导入 Excel</h3>
+            <p style="font-size: 12px; color: #999;">请上传格式为：店名 | 菜品 | 价格 | 口味 | 位置 的表格</p>
+            <input type="file" @change="handleExcel" accept=".xlsx, .xls">
+        </div>
+
+        <h3>📝 当前店铺清单 ({{stores.length}})</h3>
+        <div v-for="s in stores" :key="s.id" class="card" style="padding:15px; border-radius: 20px; border-width: 2px;">
+            <b style="font-size: 18px;">{{s.name}}</b>
+            <div style="font-size: 12px; color:#999; margin-top:5px;">{{s.location}}</div>
+            <button @click="deleteStore(s.name)" style="position:absolute; right:20px; top:20px; color:#ff4757; border:none; background:none; font-weight:bold;">删除</button>
+        </div>
     </div>
 </div>
 
 <script>
-    let myFoods = JSON.parse(localStorage.getItem('foodData')) || [];
-    let startX = 0;
+    // --- 自动填写的 Supabase 凭证 ---
+    const SUPABASE_URL = 'https://itebzgccIuqfxwpehmwp.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_EX7F-J9H9Tw-y11kWoX0kQ_oLJcZqp1';
+    const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-    function initCard() {
-        const maxPrice = parseInt(document.getElementById('priceRange').value);
-        const filtered = myFoods.filter(f => f.price <= maxPrice);
-        if (filtered.length === 0) return alert("没找到符合预算的店，请先录入或调高预算");
-        const food = filtered[Math.floor(Math.random() * filtered.length)];
-        renderCard(food);
-    }
-
-    function renderCard(food) {
-        const container = document.getElementById('container');
-        container.innerHTML = '';
-        const card = document.createElement('div');
-        card.className = 'food-card';
-        card.innerHTML = `<h2>${food.name}</h2><p>${food.dish}</p><h3 style="color:#ffafbd">￥${food.price}</h3><p style="font-size:12px;color:#ccc">⬅️换一个 | 看位置➡️</p>`;
-        
-        card.ontouchstart = (e) => { startX = e.touches[0].clientX; card.style.transition = 'none'; };
-        card.ontouchmove = (e) => { 
-            let moveX = e.touches[0].clientX - startX;
-            card.style.transform = `translateX(${moveX}px) rotate(${moveX/10}deg)`;
-        };
-        card.ontouchend = (e) => {
-            let moveX = e.changedTouches[0].clientX - startX;
-            card.style.transition = '0.3s';
-            if (Math.abs(moveX) > 100) {
-                card.style.transform = `translateX(${moveX > 0 ? 500 : -500}px) rotate(${moveX/10}deg)`;
-                setTimeout(() => {
-                    if(moveX > 0) {
-                        if(food.loc.includes('http')) window.open(food.loc);
-                        else alert("位置：" + food.loc);
+    new Vue({
+        el: '#app',
+        data: {
+            page: 'login',
+            groupCode: localStorage.getItem('lastGroup') || '',
+            myName: localStorage.getItem('myName') || '',
+            myAvatar: '🐱',
+            avatars: ['🐱','🐶','🐰','🦊','🐼','🐨','🐷','🦁','🐸','🐹'],
+            maxPrice: 80,
+            allTastes: ['清淡','酸甜','麻辣','其他'],
+            filterTastes: [],
+            stores: [],
+            dishes: [],
+            currentStore: null,
+            showDishes: false,
+            currentDishes: [],
+            luckyDishIndex: -1,
+            loading: false
+        },
+        methods: {
+            async enterGroup() {
+                if(!this.groupCode || !this.myName) return alert("暗号和昵称都要填哦！");
+                localStorage.setItem('lastGroup', this.groupCode);
+                localStorage.setItem('myName', this.myName);
+                this.loading = true;
+                await this.loadData();
+                this.loading = false;
+                this.page = 'main';
+                this.$nextTick(() => this.initHammer());
+            },
+            async loadData() {
+                // 从云端获取店铺和菜品
+                const { data: sData } = await _supabase.from('stores').select('*').eq('group_code', this.groupCode);
+                const { data: dData } = await _supabase.from('dishes').select('*').eq('group_code', this.groupCode);
+                this.stores = sData || [];
+                this.dishes = dData || [];
+                this.pickNextStore();
+            },
+            pickNextStore() {
+                this.showDishes = false;
+                // 筛选逻辑
+                const filtered = this.stores.filter(s => {
+                    const sDishes = this.dishes.filter(d => d.store_name === s.name);
+                    const matchPrice = sDishes.some(d => d.price <= this.maxPrice);
+                    const matchTaste = this.filterTastes.length === 0 || sDishes.some(d => this.filterTastes.includes(d.taste));
+                    return matchPrice && matchTaste;
+                });
+                
+                if (filtered.length === 0) {
+                    this.currentStore = null;
+                } else {
+                    // 随机选一家，尽量不选到刚抽中过的
+                    let next;
+                    do {
+                        next = filtered[Math.floor(Math.random() * filtered.length)];
+                    } while (filtered.length > 1 && this.currentStore && next.name === this.currentStore.name);
+                    this.currentStore = next;
+                }
+            },
+            initHammer() {
+                const el = document.getElementById('active-card');
+                if(!el) return;
+                const mc = new Hammer(el);
+                mc.on("pan", (ev) => {
+                    el.style.transition = 'none';
+                    el.style.transform = `translateX(${ev.deltaX}px) rotate(${ev.deltaX/12}deg)`;
+                });
+                mc.on("panend", (ev) => {
+                    el.style.transition = '0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
+                    if(ev.deltaX > 140) { // 右滑确认
+                        el.style.transform = 'translateX(500px) rotate(30deg)';
+                        this.handleSelect();
+                    } else if(ev.deltaX < -140) { // 左滑换一个
+                        el.style.transform = 'translateX(-500px) rotate(-30deg)';
+                        setTimeout(() => { this.pickNextStore(); el.style.transform = 'none'; }, 300);
+                    } else {
+                        el.style.transform = 'none';
                     }
-                    initCard();
-                }, 200);
-            } else {
-                card.style.transform = 'translateX(0) rotate(0)';
+                });
+            },
+            handleSelect() {
+                // 获取该店菜品并随机高亮一个
+                this.currentDishes = this.dishes.filter(d => d.store_name === this.currentStore.name);
+                this.luckyDishIndex = Math.floor(Math.random() * this.currentDishes.length);
+                this.showDishes = true;
+                // 地图跳转
+                const url = `https://www.amap.com/search?query=${encodeURIComponent(this.currentStore.name)}`;
+                setTimeout(() => {
+                    if(confirm("店选好啦！要去看看地图怎么走吗？")) window.open(url);
+                }, 400);
+            },
+            async eatThis() {
+                // 更新冷却时间
+                const { error } = await _supabase.from('stores').update({ last_eaten: new Date() }).eq('name', this.currentStore.name).eq('group_code', this.groupCode);
+                if(error) alert("保存失败，请检查网络");
+                else {
+                    alert("祝你用餐愉快！这家店将进入3天冷却期。");
+                    location.reload(); // 刷新以更新状态
+                }
+            },
+            isCooling(s) {
+                if(!s.last_eaten) return false;
+                const diff = (new Date() - new Date(s.last_eaten)) / (1000 * 60 * 60 * 24);
+                return diff < 3;
+            },
+            toggleTaste(t) {
+                const idx = this.filterTastes.indexOf(t);
+                if(idx > -1) this.filterTastes.splice(idx, 1);
+                else this.filterTastes.push(t);
+                this.pickNextStore();
+            },
+            async handleExcel(e) {
+                const file = e.target.files[0];
+                const reader = new FileReader();
+                reader.onload = async (ev) => {
+                    const data = ev.target.result;
+                    const workbook = XLSX.read(data, {type: 'binary'});
+                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
+                    
+                    rows.shift(); // 移除第一行表头
+                    this.loading = true;
+                    for(let row of rows) {
+                        const [sName, dName, price, taste, loc] = row;
+                        if(!sName) continue;
+                        
+                        // 1. 存店铺 (如果不存在)
+                        const exist = this.stores.find(s => s.name === sName);
+                        if(!exist) {
+                            await _supabase.from('stores').insert([{name: sName, location: loc||'附近', group_code: this.groupCode}]);
+                        }
+                        // 2. 存菜品
+                        await _supabase.from('dishes').insert([{name: dName, price: parseInt(price)||0, taste: taste||'其他', store_name: sName, group_code: this.groupCode}]);
+                    }
+                    alert("全部美食导入成功！");
+                    this.loadData();
+                    this.loading = false;
+                };
+                reader.readAsBinaryString(file);
+            },
+            async deleteStore(name) {
+                if(!confirm(`确定要彻底删除“${name}”的所有信息吗？`)) return;
+                await _supabase.from('stores').delete().eq('name', name).eq('group_code', this.groupCode);
+                await _supabase.from('dishes').delete().eq('store_name', name).eq('group_code', this.groupCode);
+                this.loadData();
             }
-        };
-        container.appendChild(card);
-    }
-
-    function addFood() {
-        const name = document.getElementById('inStore').value;
-        const price = document.getElementById('inPrice').value;
-        const dish = document.getElementById('inDish').value || "好吃的";
-        const loc = document.getElementById('inLoc').value || "附近";
-        if (!name || !price) return alert("名字和价格都要填哦");
-        myFoods.push({ name, dish, price: parseInt(price), loc });
-        localStorage.setItem('foodData', JSON.stringify(myFoods));
-        alert("存好啦！");
-        document.getElementById('inStore').value = '';
-        document.getElementById('inPrice').value = '';
-    }
+        }
+    });
 </script>
 
 </body>
