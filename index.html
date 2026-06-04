@@ -18,29 +18,24 @@
         body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow-x: hidden; touch-action: manipulation; }
         #app { max-width: 450px; margin: 0 auto; padding: 20px; box-sizing: border-box; }
         
-        /* 基础 UI 样式 */
         .btn { border: none; border-radius: 25px; padding: 12px 20px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .btn:active { transform: scale(0.95); }
         .card { background: #fff; border-radius: 35px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); padding: 20px; margin: 15px 0; border: 5px solid var(--m-yellow); position: relative; animation: fadeIn 0.4s; }
         
-        /* 登录页 */
         .login-box { text-align: center; margin-top: 50px; }
         .avatar-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 15px 0; }
         .avatar { width: 50px; height: 50px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; font-size: 30px; display: flex; align-items: center; justify-content: center; background: #eee; }
         .avatar.active { border-color: var(--m-pink); background: var(--m-yellow); }
 
-        /* Tinder 卡片 */
         #tinder-stage { height: 350px; position: relative; perspective: 1000px; margin: 20px 0; width: 100%; }
         .tinder-card { width: 100%; height: 100%; position: absolute; background: white; border-radius: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 8px solid var(--m-pink); box-sizing: border-box; touch-action: none; z-index: 10; transition: transform 0.1s; }
         .cooling { filter: grayscale(1); opacity: 0.6; }
         .cooling::after { content: "❄️ 冷却中"; position: absolute; top: 10px; right: 20px; color: #999; font-size: 12px; font-weight: bold; }
 
-        /* 筛选器 */
         .filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
         .tag { background: #eee; padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; }
         .tag.active { background: var(--m-blue); color: white; }
 
-        /* 菜单展示 */
         .dish-item { padding: 10px; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center; }
         .highlight { background: var(--m-yellow); border-radius: 12px; font-weight: bold; }
 
@@ -53,50 +48,51 @@
 <body>
 
 <div id="app" v-cloak>
-    <!-- 第一页：登录 -->
+    <!-- 第一页：入口 -->
     <div v-if="page === 'login'" class="login-box">
         <h1 style="color: var(--m-pink);">🍡 美食小组入口</h1>
-        <input type="text" v-model="groupCode" placeholder="输入小组暗号">
+        <input type="text" v-model="groupCode" placeholder="输入小组暗号 (如：饕餮之家)">
         <div class="avatar-pick">
             <div v-for="a in avatars" :key="a" class="avatar" :class="{active: myAvatar === a}" @click="myAvatar = a">{{a}}</div>
         </div>
         <input type="text" v-model="myName" placeholder="你的昵称">
-        <button class="btn" style="background:var(--m-pink); width:100%; color:white;" @click="enterGroup">进入美食世界</button>
+        <button class="btn" style="background:var(--m-pink); width:100%; color:white; font-size:18px" @click="enterGroup">进入美食世界</button>
     </div>
 
-    <!-- 第二页：主界面 -->
+    <!-- 第二页：主抽签页 -->
     <div v-if="page === 'main'">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <span>{{myAvatar}} {{myName}} ({{groupCode}})</span>
             <button class="btn" style="background:var(--m-green); padding: 8px 15px;" @click="page='manage'">⚙️ 管理清单</button>
         </div>
 
-        <h2 style="text-align: center; color:var(--m-pink);">🍱 今天吃什么？</h2>
+        <h2 style="text-align: center; color:var(--m-pink); margin-top:20px;">🍱 今天吃什么？</h2>
 
         <div class="filters">
             <div v-for="t in allTastes" :class="['tag', filterTastes.includes(t)?'active':'']" @click="toggleTaste(t)">{{t}}</div>
-            <div class="tag" style="background: var(--m-yellow)">预算: {{maxPrice}}元</div>
+            <div class="tag" style="background: var(--m-yellow)">预算: {{maxPrice}}元内</div>
         </div>
         <input type="range" min="10" max="200" step="5" v-model="maxPrice" style="width:100%">
 
         <div id="tinder-stage">
             <div v-if="loading" style="text-align: center; padding-top: 120px; color:#bbb;">正在连接云端...</div>
             <div v-else-if="currentStore" class="tinder-card" id="active-card" :class="{cooling: isCooling(currentStore)}">
-                <h1>{{currentStore.name}}</h1>
-                <p style="color: #999;">📍 {{currentStore.location}}</p>
-                <div v-if="!isCooling(currentStore)" style="color:var(--m-pink); font-weight: bold;">⬅️ 左划换一个 | 右划确定 ➡️</div>
-                <div v-else style="color:#999">❄️ 冷静期内</div>
+                <h1 style="margin-bottom:10px">{{currentStore.name}}</h1>
+                <p style="color: #999; font-size:14px">📍 {{currentStore.location}}</p>
+                <div v-if="!isCooling(currentStore)" style="color:var(--m-pink); font-weight: bold; margin-top:10px">⬅️ 左划换一个 | 右划确定 ➡️</div>
+                <div v-else style="color:#999; margin-top:10px">❄️ 冷静期内</div>
             </div>
             <div v-else style="text-align: center; padding-top: 100px; color:#ccc;">暂无匹配，请先导入数据</div>
         </div>
 
+        <!-- 抽中后的菜品高亮展示 -->
         <div v-if="showDishes" class="card">
-            <h3 style="text-align: center;">🎉 选中啦！快看招牌：</h3>
+            <h3 style="text-align: center; margin-top:0">🎉 选中啦！建议点：</h3>
             <div v-for="(d, i) in currentDishes" :key="i" :class="['dish-item', i === luckyDishIndex ? 'highlight':'']">
                 <span>{{d.name}}</span>
                 <span style="color: var(--m-pink); font-weight: bold;">￥{{d.price}}</span>
             </div>
-            <button class="btn" style="background:var(--m-pink); width:100%; color:white; margin-top:15px" @click="eatThis">就吃这家啦！</button>
+            <button class="btn" style="background:var(--m-pink); width:100%; color:white; margin-top:15px; font-size:18px" @click="eatThis">决定了，吃这家！</button>
         </div>
     </div>
 
@@ -105,20 +101,21 @@
         <button class="btn" style="background:#eee; margin-bottom: 20px;" @click="page='main'">⬅️ 返回</button>
         <div class="card">
             <h3 style="margin-top:0">📊 批量导入 Excel</h3>
+            <p style="font-size:12px; color:#999">格式：店名 | 菜品 | 价格 | 口味 | 位置</p>
             <input type="file" @change="handleExcel" accept=".xlsx, .xls">
         </div>
         <h3>📝 现存店铺 ({{stores.length}})</h3>
-        <div v-for="s in stores" :key="s.id" class="card" style="padding:15px; border-radius: 20px;">
-            <b>{{s.name}}</b>
-            <button @click="deleteStore(s.name)" style="float:right; color:red; border:none; background:none;">删除</button>
+        <div v-for="s in stores" :key="s.id" class="card" style="padding:15px; border-radius: 20px; border-width: 2px;">
+            <b style="font-size:18px">{{s.name}}</b>
+            <button @click="deleteStore(s.name)" style="float:right; color:red; border:none; background:none; font-weight:bold;">删除</button>
         </div>
     </div>
 </div>
 
 <script>
-    // --- 已为你填写好的 Supabase 凭证 ---
-    const SUPABASE_URL = 'https://itebzgccIuqfxwpehmwp.supabase.co';
-    const SUPABASE_KEY = 'sb_publishable_EX7F-J9H9Tw-y11kWoX0kQ_oLJcZqp1';
+    // --- 自动为你填写修正后的 API 信息 ---
+    const SUPABASE_URL = 'https://itebzgccluqfxwpehmwp.supabase.co';
+    const SUPABASE_KEY = 'sb_publishable_EX7F-J9H9Tw-y11kWoX0kQ_oLJcZqp1'; 
     const _supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     new Vue({
@@ -138,7 +135,7 @@
                 this.loading = true;
                 await this.loadData();
                 this.loading = false;
-                this.page = 'main';
+                if (this.page === 'login') this.page = 'main';
                 this.$nextTick(() => this.initHammer());
             },
             async loadData() {
@@ -151,7 +148,7 @@
                     this.pickNextStore();
                 } catch (e) {
                     alert("⚠️ 无法连接数据库，请检查网络或确认数据库 RLS 已关闭。");
-                    console.error(e);
+                    console.error("数据库报错详情:", e);
                 }
             },
             pickNextStore() {
@@ -174,10 +171,10 @@
                 });
                 mc.on("panend", (ev) => {
                     el.style.transition = '0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                    if(ev.deltaX > 140) { // 右滑确认
+                    if(ev.deltaX > 140) { // 右滑
                         el.style.transform = 'translateX(500px) rotate(30deg)';
                         this.handleSelect();
-                    } else if(ev.deltaX < -140) { // 左滑下一个
+                    } else if(ev.deltaX < -140) { // 左滑
                         el.style.transform = 'translateX(-500px) rotate(-30deg)';
                         setTimeout(() => { this.pickNextStore(); el.style.transform = 'none'; }, 300);
                     } else { el.style.transform = 'none'; }
@@ -188,12 +185,12 @@
                 this.luckyDishIndex = Math.floor(Math.random() * this.currentDishes.length);
                 this.showDishes = true;
                 const url = `https://www.amap.com/search?query=${encodeURIComponent(this.currentStore.name)}`;
-                setTimeout(() => { if(confirm("要去看看地图怎么走吗？")) window.open(url); }, 400);
+                setTimeout(() => { if(confirm("选中啦！要去看看地图怎么走吗？")) window.open(url); }, 400);
             },
             async eatThis() {
                 const { error } = await _supabase.from('stores').update({ last_eaten: new Date() }).eq('name', this.currentStore.name).eq('group_code', this.groupCode);
                 if(error) alert("保存失败");
-                else { alert("祝用餐愉快！进入3天冷却期。"); location.reload(); }
+                else { alert("祝用餐愉快！3天冷静期已启动。"); location.reload(); }
             },
             isCooling(s) {
                 if(!s.last_eaten) return false;
@@ -212,7 +209,7 @@
                     try {
                         const workbook = XLSX.read(ev.target.result, {type: 'binary'});
                         const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
-                        rows.shift();
+                        rows.shift(); // 删表头
                         this.loading = true;
                         let ok = 0, err = 0;
                         for(let row of rows) {
@@ -228,13 +225,13 @@
                         }
                         this.loading = false;
                         if(ok > 0) { alert(`导入完成！成功: ${ok} 条, 失败: ${err} 条`); this.loadData(); }
-                        else { alert("🚨 全部失败！请在手机上使用数据流量重试，并检查 RLS 是否已关闭。"); }
+                        else { alert("🚨 导入失败！请检查网络是否畅通。"); }
                     } catch (err) { alert("文件解析失败"); this.loading = false; }
                 };
                 reader.readAsBinaryString(file);
             },
             async deleteStore(name) {
-                if(!confirm(`确定删除“${name}”吗？`)) return;
+                if(!confirm(`确定要彻底删除“${name}”吗？`)) return;
                 await _supabase.from('stores').delete().eq('name', name).eq('group_code', this.groupCode);
                 await _supabase.from('dishes').delete().eq('store_name', name).eq('group_code', this.groupCode);
                 this.loadData();
