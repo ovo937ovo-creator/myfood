@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>今天吃什么 - 我的美食地图</title>
+    <style>
+        /* 基础样式：让页面看起来像个精致的手机App */
+        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: #fdfaf5; display: flex; flex-direction: column; align-items: center; padding: 20px; color: #444; margin: 0; }
+        #app { width: 100%; max-width: 400px; padding-bottom: 50px; }
+        h1 { text-align: center; color: #ff6b6b; font-size: 28px; margin-top: 30px; }
+        
+        /* 大按钮：抽奖的感觉 */
+        .main-btn { width: 100%; background: linear-gradient(135deg, #ff6b6b, #ff8787); color: white; border: none; padding: 18px; border-radius: 15px; font-size: 20px; font-weight: bold; cursor: pointer; margin: 20px 0; box-shadow: 0 6px 15px rgba(255, 107, 107, 0.3); transition: transform 0.1s; }
+        .main-btn:active { transform: scale(0.98); }
+
+        /* 食物卡片：展示抽到的结果 */
+        .card { background: white; border-radius: 20px; padding: 25px; box-shadow: 0 10px 30px rgba(0,0,0,0.08); display: none; margin-top: 10px; animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        @keyframes popIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        
+        .card h2 { margin: 0 0 10px 0; color: #2d3436; font-size: 24px; }
+        .card p { margin: 5px 0; color: #636e72; }
+        .price { color: #f0932b; font-size: 22px; font-weight: bold; margin: 15px 0 !important; }
+        .location-tag { display: inline-block; background: #e1f5fe; color: #039be5; padding: 6px 12px; border-radius: 20px; font-size: 13px; cursor: pointer; margin-bottom: 15px; }
+        .stars { font-size: 24px; color: #f1c40f; margin-bottom: 20px; }
+        
+        /* 交互按钮组 */
+        .actions { display: flex; gap: 10px; }
+        .btn-sub { flex: 1; padding: 12px; border-radius: 10px; border: none; cursor: pointer; font-weight: bold; }
+        .btn-next { background: #dfe6e9; color: #636e72; }
+        .btn-rate { background: #55efc4; color: #00b894; }
+
+        /* 录入表单：添加新店 */
+        .form-box { background: #fff; padding: 20px; border-radius: 20px; margin-top: 40px; border: 1px dashed #fab1a0; }
+        .form-box h3 { margin-top: 0; font-size: 18px; color: #e17055; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #eee; border-radius: 10px; box-sizing: border-box; outline: none; }
+        input:focus { border-color: #ff6b6b; }
+        .btn-add { background: #2d3436; color: white; width: 100%; padding: 12px; border-radius: 10px; border: none; margin-top: 10px; cursor: pointer; }
+    </style>
+</head>
+<body>
+
+<div id="app">
+    <h1>🥘 今天吃什么？</h1>
+    <button class="main-btn" onclick="randomPick()">帮我选一个！</button>
+
+    <!-- 结果展示区 -->
+    <div id="foodCard" class="card">
+        <h2 id="storeName">店名加载中...</h2>
+        <p id="dishName">招牌菜品</p>
+        <p class="price">人均 ￥<span id="priceNum">0</span></p>
+        <div id="stars" class="stars">⭐⭐⭐⭐⭐</div>
+        <div id="location" class="location-tag">📍 点击导航/查看位置</div>
+        
+        <div class="actions">
+            <button class="btn-sub btn-next" onclick="randomPick()">❌ 不喜欢</button>
+            <button class="btn-sub btn-rate" onclick="updateRating()">⭐ 评价</button>
+        </div>
+    </div>
+
+    <!-- 录入新店区 -->
+    <div class="form-box">
+        <h3>✨ 录入新发现的店</h3>
+        <input type="text" id="inStore" placeholder="店名 (如: 老大爷肉夹馍)">
+        <input type="text" id="inDish" placeholder="推荐吃什么?">
+        <input type="number" id="inPrice" placeholder="人均价格">
+        <input type="text" id="inLoc" placeholder="位置 (可直接粘贴地图分享链接)">
+        <button class="btn-add" onclick="saveFood()">保存到清单</button>
+    </div>
+</div>
+
+<script>
+    // 1. 初始化数据：如果有旧数据就用旧的，没有就给两个初始样板
+    let myFoods = JSON.parse(localStorage.getItem('foodData')) || [
+        { name: "示例：快乐炸鸡", dish: "大鸡腿", price: 25, loc: "公司下楼转角", star: 5 },
+        { name: "示例：隔壁面馆", dish: "牛肉面", price: 18, loc: "马路对面", star: 4 }
+    ];
+
+    let currentIndex = -1;
+
+    // 2. 随机抽取逻辑
+    function randomPick() {
+        if (myFoods.length === 0) return alert("你的清单是空的，快录入一点吃的吧！");
+        
+        // 随机选一个索引
+        let newIndex;
+        do {
+            newIndex = Math.floor(Math.random() * myFoods.length);
+        } while (newIndex === currentIndex && myFoods.length > 1); // 避免连续抽中同一个
+        
+        currentIndex = newIndex;
+        const food = myFoods[currentIndex];
+
+        // 显示卡片并填入内容
+        document.getElementById('foodCard').style.display = 'block';
+        document.getElementById('storeName').innerText = food.name;
+        document.getElementById('dishName').innerText = "推荐：" + food.dish;
+        document.getElementById('priceNum').innerText = food.price;
+        document.getElementById('stars').innerText = "⭐".repeat(food.star);
+        
+        // 点击位置的逻辑
+        document.getElementById('location').onclick = () => {
+            if(food.loc.startsWith('http')) {
+                window.open(food.loc); // 如果是链接直接打开
+            } else {
+                alert("位置描述：" + food.loc);
+            }
+        };
+    }
+
+    // 3. 保存新店逻辑
+    function saveFood() {
+        const name = document.getElementById('inStore').value;
+        const dish = document.getElementById('inDish').value || "好吃的";
+        const price = document.getElementById('inPrice').value || "??";
+        const loc = document.getElementById('inLoc').value || "未知位置";
+
+        if (!name) return alert("店名总得写一个吧~");
+
+        myFoods.push({ name, dish, price, loc, star: 5 });
+        localStorage.setItem('foodData', JSON.stringify(myFoods)); // 永久存到浏览器里
+
+        alert("已成功加入你的美食库！");
+        // 清空输入框
+        document.getElementById('inStore').value = '';
+        document.getElementById('inDish').value = '';
+        document.getElementById('inPrice').value = '';
+        document.getElementById('inLoc').value = '';
+    }
+
+    // 4. 更新评价逻辑
+    function updateRating() {
+        const newStar = prompt("吃完了？给这家店打几颗星？(请输入数字1-5)", "5");
+        if (newStar >= 1 && newStar <= 5) {
+            myFoods[currentIndex].star = parseInt(newStar);
+            localStorage.setItem('foodData', JSON.stringify(myFoods));
+            document.getElementById('stars').innerText = "⭐".repeat(newStar);
+            alert("评价成功，下次抽中它时会显示新分数！");
+        }
+    }
+</script>
+
+</body>
+</html>
