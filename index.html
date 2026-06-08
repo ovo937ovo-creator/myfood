@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🍭 我们的美食小组</title>
+    <title>🍭 丝滑版-我们的美食小组</title>
     <!-- 引入工具库 -->
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -15,20 +15,52 @@
             --m-pink: #ffadad; --m-blue: #a0c4ff; --m-yellow: #fdffb6;
             --m-green: #caffbf; --bg: #fffaf0; --text: #6d6d6d;
         }
-        body { font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow-x: hidden; touch-action: manipulation; }
+        body { 
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; 
+            background: var(--bg); color: var(--text); 
+            margin: 0; overflow-x: hidden; 
+            /* 解决卡顿的关键：禁止浏览器默认的左右滑动手势（如翻页） */
+            touch-action: pan-y; 
+        }
         #app { max-width: 450px; margin: 0 auto; padding: 20px; box-sizing: border-box; }
         
         .btn { border: none; border-radius: 25px; padding: 12px 20px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
         .btn:active { transform: scale(0.95); }
-        .card { background: #fff; border-radius: 35px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); padding: 20px; margin: 15px 0; border: 5px solid var(--m-yellow); position: relative; animation: fadeIn 0.4s; }
+        .card { background: #fff; border-radius: 35px; box-shadow: 0 10px 20px rgba(0,0,0,0.05); padding: 20px; margin: 15px 0; border: 5px solid var(--m-yellow); position: relative; }
         
         .login-box { text-align: center; margin-top: 50px; }
         .avatar-pick { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; margin: 15px 0; }
         .avatar { width: 50px; height: 50px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; font-size: 30px; display: flex; align-items: center; justify-content: center; background: #eee; }
         .avatar.active { border-color: var(--m-pink); background: var(--m-yellow); }
 
-        #tinder-stage { height: 350px; position: relative; perspective: 1000px; margin: 20px 0; width: 100%; }
-        .tinder-card { width: 100%; height: 100%; position: absolute; background: white; border-radius: 40px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 8px solid var(--m-pink); box-sizing: border-box; touch-action: none; z-index: 10; transition: transform 0.1s; }
+        /* Tinder 卡片优化区 */
+        #tinder-stage { 
+            height: 350px; position: relative; 
+            margin: 20px 0; width: 100%; 
+            display: flex; justify-content: center; align-items: center;
+        }
+        .tinder-card { 
+            width: 100%; height: 100%; 
+            position: absolute; background: white; 
+            border-radius: 40px; display: flex; 
+            flex-direction: column; align-items: center; 
+            justify-content: center; border: 8px solid var(--m-pink); 
+            box-sizing: border-box; z-index: 10;
+            
+            /* 丝滑核心：开启 GPU 加速和位图缓存 */
+            will-change: transform; 
+            transform: translate3d(0,0,0);
+            backface-visibility: hidden;
+        }
+        
+        /* 增加左右滑动的颜色提示 */
+        .card-status {
+            position: absolute; top: 20px; font-weight: bold; font-size: 20px;
+            padding: 5px 15px; border-radius: 10px; opacity: 0; transition: 0.1s;
+        }
+        .status-like { right: 20px; color: var(--m-green); border: 3px solid var(--m-green); transform: rotate(15deg); }
+        .status-nope { left: 20px; color: var(--m-pink); border: 3px solid var(--m-pink); transform: rotate(-15deg); }
+
         .cooling { filter: grayscale(1); opacity: 0.6; }
         .cooling::after { content: "❄️ 冷却中"; position: absolute; top: 10px; right: 20px; color: #999; font-size: 12px; font-weight: bold; }
 
@@ -42,13 +74,12 @@
         input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 15px; border: 2px solid #eee; box-sizing: border-box; outline: none; font-size: 15px; }
         
         [v-cloak] { display: none; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div id="app" v-cloak>
-    <!-- 第一页：登录入口 -->
     <div v-if="page === 'login'" class="login-box">
         <h1 style="color: var(--m-pink);">🍡 美食小组入口</h1>
         <input type="text" v-model="groupCode" placeholder="输入小组暗号">
@@ -59,7 +90,6 @@
         <button class="btn" style="background:var(--m-pink); width:100%; color:white; font-size:18px" @click="enterGroup">进入美食世界</button>
     </div>
 
-    <!-- 第二页：主界面 -->
     <div v-if="page === 'main'">
         <div style="display: flex; justify-content: space-between; align-items: center;">
             <span style="font-size: 14px;">{{myAvatar}} {{myName}} ({{groupCode}})</span>
@@ -75,17 +105,25 @@
         <input type="range" min="10" max="200" step="5" v-model="maxPrice" style="width:100%; accent-color: var(--m-pink);">
 
         <div id="tinder-stage">
-            <div v-if="loading" style="text-align: center; padding-top: 120px; color:#bbb;">正在连接云端...</div>
-            <div v-else-if="currentStore" class="tinder-card" id="active-card" :class="{cooling: isCooling(currentStore)}">
-                <h1>{{currentStore.name}}</h1>
-                <p style="color: #999;">📍 {{currentStore.location}}</p>
-                <div v-if="!isCooling(currentStore)" style="color:var(--m-pink); font-weight: bold; margin-top:10px">⬅️ 左划换一个 | 右划确定 ➡️</div>
-                <div v-else style="color:#999; margin-top:10px">❄️ 冷静期内</div>
+            <div v-if="loading" style="text-align: center; padding-top: 120px; color:#bbb;">连接中...</div>
+            
+            <!-- 渲染当前卡片 -->
+            <div v-else-if="currentStore" class="tinder-card" id="active-card" :key="currentStore.id" :class="{cooling: isCooling(currentStore)}">
+                <!-- 滑动状态提示标签 -->
+                <div class="card-status status-like" id="label-like">LIKE</div>
+                <div class="card-status status-nope" id="label-nope">NOPE</div>
+                
+                <h1 style="margin: 0; font-size: 30px;">{{currentStore.name}}</h1>
+                <p style="color: #999; margin-top: 10px;">📍 {{currentStore.location}}</p>
+                <div style="margin-top: 30px; font-weight: bold; font-size: 14px;" :style="{color: isCooling(currentStore) ? '#ccc' : 'var(--m-pink)'}">
+                    {{isCooling(currentStore) ? '❄️ 冷静期内' : '⬅️ 划走 | 确定 ➡️'}}
+                </div>
             </div>
-            <div v-else style="text-align: center; padding-top: 100px; color:#ccc;">暂无匹配，请先点击管理录入数据</div>
+            
+            <div v-else style="text-align: center; padding-top: 100px; color:#ccc;">暂无匹配，请先点击管理录入</div>
         </div>
 
-        <div v-if="showDishes" class="card">
+        <div v-if="showDishes" class="card" style="animation: slideIn 0.3s ease-out;">
             <h3 style="text-align: center; margin-top:0">🎉 选中啦！建议点：</h3>
             <div v-for="(d, i) in currentDishes" :key="i" :class="['dish-item', i === luckyDishIndex ? 'highlight':'']">
                 <span>{{d.name}}</span>
@@ -95,11 +133,9 @@
         </div>
     </div>
 
-    <!-- 第三页：管理页面 -->
     <div v-if="page === 'manage'">
         <button class="btn" style="background:#eee; margin-bottom: 20px;" @click="page='main'">⬅️ 返回</button>
         
-        <!-- 手动录入窗口 -->
         <div class="card" style="border-color: var(--m-pink);">
             <h3 style="margin-top:0; color: var(--m-pink)">✨ 手动录入新店</h3>
             <input type="text" v-model="form.sName" placeholder="店名">
@@ -113,10 +149,8 @@
             <button class="btn" style="background:var(--m-pink); color:white; width:100%; margin-top:10px" @click="manualAdd">保 存</button>
         </div>
 
-        <!-- Excel 批量导入 -->
         <div class="card" style="border-color: var(--m-blue);">
             <h3 style="margin-top:0; color: var(--m-blue)">📊 批量导入 Excel</h3>
-            <p style="font-size:11px; color:#999">格式：店名 | 菜品 | 价格 | 口味 | 位置</p>
             <input type="file" @change="handleExcel" accept=".xlsx, .xls">
         </div>
 
@@ -141,7 +175,6 @@
             avatars: ['🐱','🐶','🐰','🦊','🐼','🐨','🐷','🦁','🐸','🐹'],
             maxPrice: 80, allTastes: ['清淡','酸甜','麻辣','其他'], filterTastes: [],
             stores: [], dishes: [], currentStore: null, showDishes: false, currentDishes: [], luckyDishIndex: -1, loading: false,
-            // 手动录入表单数据
             form: { sName: '', dName: '', price: '', taste: '', loc: '' }
         },
         methods: {
@@ -170,25 +203,64 @@
                     const matchTaste = this.filterTastes.length === 0 || sDishes.some(d => this.filterTastes.includes(d.taste));
                     return matchPrice && matchTaste;
                 });
-                this.currentStore = filtered[Math.floor(Math.random() * filtered.length)] || null;
+                
+                // 简单的防重复逻辑
+                let next = filtered[Math.floor(Math.random() * filtered.length)] || null;
+                if(filtered.length > 1 && this.currentStore && next && next.name === this.currentStore.name) {
+                    next = filtered[Math.floor(Math.random() * filtered.length)];
+                }
+                this.currentStore = next;
+                
+                // 每次切换卡片后，重新绑定 Hammer 监听
+                this.$nextTick(() => this.initHammer());
             },
             initHammer() {
                 const el = document.getElementById('active-card');
                 if(!el) return;
-                const mc = new Hammer(el);
-                mc.on("pan", (ev) => {
+                
+                // 每次绑定前先尝试销毁之前的实例，防止叠加
+                if (this.hammer) { this.hammer.destroy(); }
+                
+                this.hammer = new Hammer(el);
+                
+                // 优化：只监听水平滑动，减少计算量
+                this.hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 10 });
+
+                const likeLabel = document.getElementById('label-like');
+                const nopeLabel = document.getElementById('label-nope');
+
+                this.hammer.on("pan", (ev) => {
+                    // 使用 translate3d 开启硬件加速
                     el.style.transition = 'none';
-                    el.style.transform = `translateX(${ev.deltaX}px) rotate(${ev.deltaX/12}deg)`;
+                    el.style.transform = `translate3d(${ev.deltaX}px, 0, 0) rotate(${ev.deltaX/15}deg)`;
+                    
+                    // 显示提示文字的透明度
+                    if (ev.deltaX > 50) {
+                        likeLabel.style.opacity = Math.min(ev.deltaX / 150, 1);
+                        nopeLabel.style.opacity = 0;
+                    } else if (ev.deltaX < -50) {
+                        nopeLabel.style.opacity = Math.min(Math.abs(ev.deltaX) / 150, 1);
+                        likeLabel.style.opacity = 0;
+                    }
                 });
-                mc.on("panend", (ev) => {
-                    el.style.transition = '0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)';
-                    if(ev.deltaX > 140) { // 右滑
-                        el.style.transform = 'translateX(500px) rotate(30deg)';
-                        this.handleSelect();
-                    } else if(ev.deltaX < -140) { // 左滑
-                        el.style.transform = 'translateX(-500px) rotate(-30deg)';
-                        setTimeout(() => { this.pickNextStore(); el.style.transform = 'none'; }, 300);
-                    } else { el.style.transform = 'none'; }
+
+                this.hammer.on("panend", (ev) => {
+                    el.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)';
+                    
+                    if(ev.deltaX > 140) {
+                        // 右滑
+                        el.style.transform = 'translate3d(600px, 0, 0) rotate(45deg)';
+                        setTimeout(() => this.handleSelect(), 100);
+                    } else if(ev.deltaX < -140) {
+                        // 左滑
+                        el.style.transform = 'translate3d(-600px, 0, 0) rotate(-45deg)';
+                        setTimeout(() => this.pickNextStore(), 100);
+                    } else {
+                        // 回弹
+                        el.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
+                        likeLabel.style.opacity = 0;
+                        nopeLabel.style.opacity = 0;
+                    }
                 });
             },
             handleSelect() {
@@ -199,9 +271,9 @@
                 setTimeout(() => { if(confirm("选中啦！要去看看地图怎么走吗？")) window.open(url); }, 400);
             },
             async eatThis() {
-                await _supabase.from('stores').update({ last_eaten: new Date() }).eq('name', this.currentStore.name).eq('group_code', this.groupCode);
-                alert("祝用餐愉快！3天冷静期已开启。");
-                location.reload();
+                const { error } = await _supabase.from('stores').update({ last_eaten: new Date() }).eq('name', this.currentStore.name).eq('group_code', this.groupCode);
+                if(error) alert("保存失败");
+                else { alert("祝用餐愉快！3天冷静期已启动。"); location.reload(); }
             },
             isCooling(s) {
                 if(!s.last_eaten) return false;
@@ -209,30 +281,25 @@
             },
             toggleTaste(t) {
                 const idx = this.filterTastes.indexOf(t);
-                if(idx > -1) this.filterTastes.splice(idx, 1);
-                else this.filterTastes.push(t);
+                if(idx > -1) { this.filterTastes.splice(idx, 1); }
+                else { this.filterTastes.push(t); }
                 this.pickNextStore();
             },
-            // --- 新增：手动录入函数 ---
             async manualAdd() {
                 const { sName, dName, price, taste, loc } = this.form;
                 if(!sName || !dName || !price) return alert("店名、菜名、价格都要填哦！");
-                
                 this.loading = true;
-                // 1. 检查店铺是否存在
                 const { data: exist } = await _supabase.from('stores').select('*').eq('name', sName).eq('group_code', this.groupCode);
                 if(!exist || exist.length === 0) {
                     await _supabase.from('stores').insert([{name: sName, location: loc||'附近', group_code: this.groupCode}]);
                 }
-                // 2. 存菜品
                 const { error } = await _supabase.from('dishes').insert([{name: dName, price: parseInt(price), taste: taste||'其他', store_name: sName, group_code: this.groupCode}]);
-                
                 this.loading = false;
-                if(error) alert("保存失败，请检查网络");
+                if(error) alert("保存失败");
                 else {
                     alert("✨ 存好啦！");
-                    this.form = { sName: '', dName: '', price: '', taste: '', loc: '' }; // 清空表单
-                    this.loadData(); // 重新加载数据
+                    this.form = { sName: '', dName: '', price: '', taste: '', loc: '' };
+                    this.loadData();
                 }
             },
             async handleExcel(e) {
