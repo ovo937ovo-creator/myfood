@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🍭 丝滑版-我们的美食小组</title>
-    <!-- 引入工具库 -->
+    <title>🍭 我们的美食小组-评分版</title>
     <script src="https://cdn.jsdelivr.net/npm/vue@2.6.14"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/hammer.js/2.0.8/hammer.min.js"></script>
@@ -15,13 +14,7 @@
             --m-pink: #ffadad; --m-blue: #a0c4ff; --m-yellow: #fdffb6;
             --m-green: #caffbf; --bg: #fffaf0; --text: #6d6d6d;
         }
-        body { 
-            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif; 
-            background: var(--bg); color: var(--text); 
-            margin: 0; overflow-x: hidden; 
-            /* 解决卡顿的关键：禁止浏览器默认的左右滑动手势（如翻页） */
-            touch-action: pan-y; 
-        }
+        body { font-family: 'PingFang SC', sans-serif; background: var(--bg); color: var(--text); margin: 0; overflow-x: hidden; touch-action: pan-y; }
         #app { max-width: 450px; margin: 0 auto; padding: 20px; box-sizing: border-box; }
         
         .btn { border: none; border-radius: 25px; padding: 12px 20px; cursor: pointer; font-weight: bold; transition: 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.05); }
@@ -33,53 +26,34 @@
         .avatar { width: 50px; height: 50px; border-radius: 50%; border: 3px solid transparent; cursor: pointer; font-size: 30px; display: flex; align-items: center; justify-content: center; background: #eee; }
         .avatar.active { border-color: var(--m-pink); background: var(--m-yellow); }
 
-        /* Tinder 卡片优化区 */
-        #tinder-stage { 
-            height: 350px; position: relative; 
-            margin: 20px 0; width: 100%; 
-            display: flex; justify-content: center; align-items: center;
-        }
+        #tinder-stage { height: 350px; position: relative; margin: 20px 0; width: 100%; display: flex; justify-content: center; align-items: center; }
         .tinder-card { 
-            width: 100%; height: 100%; 
-            position: absolute; background: white; 
-            border-radius: 40px; display: flex; 
-            flex-direction: column; align-items: center; 
-            justify-content: center; border: 8px solid var(--m-pink); 
-            box-sizing: border-box; z-index: 10;
-            
-            /* 丝滑核心：开启 GPU 加速和位图缓存 */
-            will-change: transform; 
-            transform: translate3d(0,0,0);
-            backface-visibility: hidden;
+            width: 100%; height: 100%; position: absolute; background: white; border-radius: 40px; display: flex; flex-direction: column; 
+            align-items: center; justify-content: center; border: 8px solid var(--m-pink); box-sizing: border-box; z-index: 10;
+            will-change: transform; transform: translate3d(0,0,0); backface-visibility: hidden;
         }
         
-        /* 增加左右滑动的颜色提示 */
-        .card-status {
-            position: absolute; top: 20px; font-weight: bold; font-size: 20px;
-            padding: 5px 15px; border-radius: 10px; opacity: 0; transition: 0.1s;
-        }
-        .status-like { right: 20px; color: var(--m-green); border: 3px solid var(--m-green); transform: rotate(15deg); }
-        .status-nope { left: 20px; color: var(--m-pink); border: 3px solid var(--m-pink); transform: rotate(-15deg); }
-
         .cooling { filter: grayscale(1); opacity: 0.6; }
-        .cooling::after { content: "❄️ 冷却中"; position: absolute; top: 10px; right: 20px; color: #999; font-size: 12px; font-weight: bold; }
-
         .filters { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; margin-bottom: 10px; }
         .tag { background: #eee; padding: 6px 16px; border-radius: 20px; font-size: 13px; cursor: pointer; }
         .tag.active { background: var(--m-blue); color: white; }
 
-        .dish-item { padding: 10px; border-bottom: 1px dashed #eee; display: flex; justify-content: space-between; align-items: center; }
-        .highlight { background: var(--m-yellow); border-radius: 12px; font-weight: bold; }
+        /* 菜品展示 */
+        .dish-item { padding: 12px; border-bottom: 1px dashed #eee; display: flex; flex-direction: column; cursor: pointer; transition: 0.2s; }
+        .dish-item:active { background: #fdfdfd; transform: scale(0.98); }
+        .dish-main { display: flex; justify-content: space-between; align-items: center; }
+        .dish-info { font-size: 12px; color: #aaa; margin-top: 4px; display: flex; justify-content: space-between; }
+        .score-tag { color: #f39c12; font-weight: bold; }
+        .highlight { background: var(--m-yellow) !important; border-radius: 12px; }
 
         input, select { width: 100%; padding: 12px; margin: 8px 0; border-radius: 15px; border: 2px solid #eee; box-sizing: border-box; outline: none; font-size: 15px; }
-        
         [v-cloak] { display: none; }
-        @keyframes slideIn { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
     </style>
 </head>
 <body>
 
 <div id="app" v-cloak>
+    <!-- 入口页 -->
     <div v-if="page === 'login'" class="login-box">
         <h1 style="color: var(--m-pink);">🍡 美食小组入口</h1>
         <input type="text" v-model="groupCode" placeholder="输入小组暗号">
@@ -90,9 +64,10 @@
         <button class="btn" style="background:var(--m-pink); width:100%; color:white; font-size:18px" @click="enterGroup">进入美食世界</button>
     </div>
 
+    <!-- 主页 -->
     <div v-if="page === 'main'">
         <div style="display: flex; justify-content: space-between; align-items: center;">
-            <span style="font-size: 14px;">{{myAvatar}} {{myName}} ({{groupCode}})</span>
+            <span style="font-size: 14px;">{{myAvatar}} {{myName}}</span>
             <button class="btn" style="background:var(--m-green); padding: 8px 15px;" @click="page='manage'">⚙️ 管理清单</button>
         </div>
 
@@ -105,56 +80,56 @@
         <input type="range" min="10" max="200" step="5" v-model="maxPrice" style="width:100%; accent-color: var(--m-pink);">
 
         <div id="tinder-stage">
-            <div v-if="loading" style="text-align: center; padding-top: 120px; color:#bbb;">连接中...</div>
-            
-            <!-- 渲染当前卡片 -->
+            <div v-if="loading" style="text-align: center; color:#bbb;">连接中...</div>
             <div v-else-if="currentStore" class="tinder-card" id="active-card" :key="currentStore.id" :class="{cooling: isCooling(currentStore)}">
-                <!-- 滑动状态提示标签 -->
-                <div class="card-status status-like" id="label-like">LIKE</div>
-                <div class="card-status status-nope" id="label-nope">NOPE</div>
-                
-                <h1 style="margin: 0; font-size: 30px;">{{currentStore.name}}</h1>
+                <h1 style="margin: 0; font-size: 28px;">{{currentStore.name}}</h1>
                 <p style="color: #999; margin-top: 10px;">📍 {{currentStore.location}}</p>
-                <div style="margin-top: 30px; font-weight: bold; font-size: 14px;" :style="{color: isCooling(currentStore) ? '#ccc' : 'var(--m-pink)'}">
-                    {{isCooling(currentStore) ? '❄️ 冷静期内' : '⬅️ 划走 | 确定 ➡️'}}
+                <div style="margin-top: 20px; font-weight: bold; color: var(--m-pink)">
+                    {{isCooling(currentStore) ? '❄️ 冷却中' : '⬅️ 换一个 | 确定 ➡️'}}
                 </div>
             </div>
-            
-            <div v-else style="text-align: center; padding-top: 100px; color:#ccc;">暂无匹配，请先点击管理录入</div>
+            <div v-else style="text-align: center; padding-top: 100px; color:#ccc;">暂无匹配，请先录入</div>
         </div>
 
-        <div v-if="showDishes" class="card" style="animation: slideIn 0.3s ease-out;">
-            <h3 style="text-align: center; margin-top:0">🎉 选中啦！建议点：</h3>
-            <div v-for="(d, i) in currentDishes" :key="i" :class="['dish-item', i === luckyDishIndex ? 'highlight':'']">
-                <span>{{d.name}}</span>
-                <span style="color: var(--m-pink); font-weight: bold;">￥{{d.price}}</span>
+        <!-- 选中后的展示 -->
+        <div v-if="showDishes" class="card">
+            <h3 style="text-align: center; margin-top:0">🎉 选中啦！点点菜品打分：</h3>
+            <div v-for="(d, i) in currentDishes" :key="i" 
+                 :class="['dish-item', i === luckyDishIndex ? 'highlight':'']"
+                 @click="openRate(d)">
+                <div class="dish-main">
+                    <b>{{d.name}}</b>
+                    <span style="color:var(--m-pink)">￥{{d.price}}</span>
+                </div>
+                <div class="dish-info">
+                    <span>{{d.taste}}</span>
+                    <span class="score-tag">⭐ {{ getAvgScore(d.name, currentStore.name) }}</span>
+                </div>
             </div>
-            <button class="btn" style="background:var(--m-pink); width:100%; color:white; margin-top:15px; font-size:18px" @click="eatThis">就吃这家啦！</button>
+            <button class="btn" style="background:var(--m-pink); width:100%; color:white; margin-top:15px" @click="eatThis">就吃这家啦！</button>
         </div>
     </div>
 
+    <!-- 管理页 -->
     <div v-if="page === 'manage'">
         <button class="btn" style="background:#eee; margin-bottom: 20px;" @click="page='main'">⬅️ 返回</button>
-        
         <div class="card" style="border-color: var(--m-pink);">
-            <h3 style="margin-top:0; color: var(--m-pink)">✨ 手动录入新店</h3>
+            <h3>✨ 手动录入</h3>
             <input type="text" v-model="form.sName" placeholder="店名">
-            <input type="text" v-model="form.dName" placeholder="推荐菜名">
-            <input type="number" v-model="form.price" placeholder="人均价格">
+            <input type="text" v-model="form.dName" placeholder="菜品名">
+            <input type="number" v-model="form.price" placeholder="价格">
             <select v-model="form.taste">
-                <option disabled value="">选择口味标签</option>
-                <option v-for="t in allTastes" :value="t">{{t}}</option>
+                <option value="清淡">清淡</option><option value="酸甜">酸甜</option>
+                <option value="麻辣">麻辣</option><option value="其他">其他</option>
             </select>
-            <input type="text" v-model="form.loc" placeholder="位置或地图链接">
-            <button class="btn" style="background:var(--m-pink); color:white; width:100%; margin-top:10px" @click="manualAdd">保 存</button>
+            <input type="text" v-model="form.loc" placeholder="位置">
+            <button class="btn" style="background:var(--m-pink); color:white; width:100%" @click="manualAdd">保存</button>
         </div>
-
-        <div class="card" style="border-color: var(--m-blue);">
-            <h3 style="margin-top:0; color: var(--m-blue)">📊 批量导入 Excel</h3>
+        <div class="card">
+            <h3>📊 导入 Excel</h3>
             <input type="file" @change="handleExcel" accept=".xlsx, .xls">
         </div>
-
-        <h3>📝 现存店铺 ({{stores.length}})</h3>
+        <h3>📝 店铺清单 ({{stores.length}})</h3>
         <div v-for="s in stores" :key="s.id" class="card" style="padding:15px; border-radius: 20px;">
             <b>{{s.name}}</b>
             <button @click="deleteStore(s.name)" style="float:right; color:red; border:none; background:none;">删除</button>
@@ -174,8 +149,9 @@
             myName: localStorage.getItem('myName') || '', myAvatar: '🐱',
             avatars: ['🐱','🐶','🐰','🦊','🐼','🐨','🐷','🦁','🐸','🐹'],
             maxPrice: 80, allTastes: ['清淡','酸甜','麻辣','其他'], filterTastes: [],
-            stores: [], dishes: [], currentStore: null, showDishes: false, currentDishes: [], luckyDishIndex: -1, loading: false,
-            form: { sName: '', dName: '', price: '', taste: '', loc: '' }
+            stores: [], dishes: [], ratings: [], currentStore: null,
+            showDishes: false, currentDishes: [], luckyDishIndex: -1, loading: false,
+            form: { sName: '', dName: '', price: '', taste: '其他', loc: '' }
         },
         methods: {
             async enterGroup() {
@@ -191,89 +167,80 @@
             async loadData() {
                 const { data: sData } = await _supabase.from('stores').select('*').eq('group_code', this.groupCode);
                 const { data: dData } = await _supabase.from('dishes').select('*').eq('group_code', this.groupCode);
+                const { data: rData } = await _supabase.from('ratings').select('*').eq('group_code', this.groupCode);
                 this.stores = sData || [];
                 this.dishes = dData || [];
+                this.ratings = rData || [];
                 this.pickNextStore();
             },
             pickNextStore() {
                 this.showDishes = false;
                 const filtered = this.stores.filter(s => {
                     const sDishes = this.dishes.filter(d => d.store_name === s.name);
-                    const matchPrice = sDishes.some(d => d.price <= this.maxPrice);
-                    const matchTaste = this.filterTastes.length === 0 || sDishes.some(d => this.filterTastes.includes(d.taste));
-                    return matchPrice && matchTaste;
+                    return sDishes.some(d => d.price <= this.maxPrice) && (this.filterTastes.length === 0 || sDishes.some(d => this.filterTastes.includes(d.taste)));
                 });
-                
-                // 简单的防重复逻辑
-                let next = filtered[Math.floor(Math.random() * filtered.length)] || null;
-                if(filtered.length > 1 && this.currentStore && next && next.name === this.currentStore.name) {
-                    next = filtered[Math.floor(Math.random() * filtered.length)];
-                }
-                this.currentStore = next;
-                
-                // 每次切换卡片后，重新绑定 Hammer 监听
+                this.currentStore = filtered[Math.floor(Math.random() * filtered.length)] || null;
                 this.$nextTick(() => this.initHammer());
+            },
+            getAvgScore(dishName, storeName) {
+                const rts = this.ratings.filter(r => r.dish_name === dishName && r.store_name === storeName);
+                if (rts.length === 0) return "暂无评分";
+                const sum = rts.reduce((acc, r) => acc + r.score, 0);
+                return (sum / rts.length).toFixed(1);
+            },
+            async openRate(dish) {
+                const score = prompt(`给道菜“${dish.name}”打个分吧？(输入0-10的整数)`, "10");
+                const num = parseInt(score);
+                if (isNaN(num) || num < 0 || num > 10) return alert("请输入0-10之间的数字哦");
+                
+                this.loading = true;
+                const { error } = await _supabase.from('ratings').insert([{
+                    store_name: this.currentStore.name,
+                    dish_name: dish.name,
+                    score: num,
+                    group_code: this.groupCode,
+                    user_name: this.myName
+                }]);
+                
+                if (error) alert("打分失败");
+                else {
+                    alert("评分成功！");
+                    await this.loadData(); // 重新加载以更新分数
+                    this.showDishes = true; // 保持显示结果页
+                }
+                this.loading = false;
             },
             initHammer() {
                 const el = document.getElementById('active-card');
+                if(!el || this.hammer) { if(this.hammer) this.hammer.destroy(); }
                 if(!el) return;
-                
-                // 每次绑定前先尝试销毁之前的实例，防止叠加
-                if (this.hammer) { this.hammer.destroy(); }
-                
                 this.hammer = new Hammer(el);
-                
-                // 优化：只监听水平滑动，减少计算量
-                this.hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL, threshold: 10 });
-
-                const likeLabel = document.getElementById('label-like');
-                const nopeLabel = document.getElementById('label-nope');
-
-                this.hammer.on("pan", (ev) => {
-                    // 使用 translate3d 开启硬件加速
+                this.hammer.get('pan').set({ direction: Hammer.DIRECTION_HORIZONTAL });
+                this.hammer.on("pan", ev => {
                     el.style.transition = 'none';
                     el.style.transform = `translate3d(${ev.deltaX}px, 0, 0) rotate(${ev.deltaX/15}deg)`;
-                    
-                    // 显示提示文字的透明度
-                    if (ev.deltaX > 50) {
-                        likeLabel.style.opacity = Math.min(ev.deltaX / 150, 1);
-                        nopeLabel.style.opacity = 0;
-                    } else if (ev.deltaX < -50) {
-                        nopeLabel.style.opacity = Math.min(Math.abs(ev.deltaX) / 150, 1);
-                        likeLabel.style.opacity = 0;
-                    }
                 });
-
-                this.hammer.on("panend", (ev) => {
+                this.hammer.on("panend", ev => {
                     el.style.transition = 'transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.1)';
-                    
                     if(ev.deltaX > 140) {
-                        // 右滑
                         el.style.transform = 'translate3d(600px, 0, 0) rotate(45deg)';
-                        setTimeout(() => this.handleSelect(), 100);
+                        setTimeout(() => { 
+                            this.currentDishes = this.dishes.filter(d => d.store_name === this.currentStore.name);
+                            this.luckyDishIndex = Math.floor(Math.random() * this.currentDishes.length);
+                            this.showDishes = true;
+                        }, 100);
                     } else if(ev.deltaX < -140) {
-                        // 左滑
                         el.style.transform = 'translate3d(-600px, 0, 0) rotate(-45deg)';
                         setTimeout(() => this.pickNextStore(), 100);
                     } else {
-                        // 回弹
                         el.style.transform = 'translate3d(0, 0, 0) rotate(0deg)';
-                        likeLabel.style.opacity = 0;
-                        nopeLabel.style.opacity = 0;
                     }
                 });
             },
-            handleSelect() {
-                this.currentDishes = this.dishes.filter(d => d.store_name === this.currentStore.name);
-                this.luckyDishIndex = Math.floor(Math.random() * this.currentDishes.length);
-                this.showDishes = true;
-                const url = `https://www.amap.com/search?query=${encodeURIComponent(this.currentStore.name)}`;
-                setTimeout(() => { if(confirm("选中啦！要去看看地图怎么走吗？")) window.open(url); }, 400);
-            },
             async eatThis() {
-                const { error } = await _supabase.from('stores').update({ last_eaten: new Date() }).eq('name', this.currentStore.name).eq('group_code', this.groupCode);
-                if(error) alert("保存失败");
-                else { alert("祝用餐愉快！3天冷静期已启动。"); location.reload(); }
+                await _supabase.from('stores').update({ last_eaten: new Date() }).eq('name', this.currentStore.name).eq('group_code', this.groupCode);
+                alert("用餐愉快！冷静期启动。");
+                location.reload();
             },
             isCooling(s) {
                 if(!s.last_eaten) return false;
@@ -281,48 +248,40 @@
             },
             toggleTaste(t) {
                 const idx = this.filterTastes.indexOf(t);
-                if(idx > -1) { this.filterTastes.splice(idx, 1); }
-                else { this.filterTastes.push(t); }
+                if(idx > -1) this.filterTastes.splice(idx, 1);
+                else this.filterTastes.push(t);
                 this.pickNextStore();
             },
             async manualAdd() {
                 const { sName, dName, price, taste, loc } = this.form;
-                if(!sName || !dName || !price) return alert("店名、菜名、价格都要填哦！");
+                if(!sName || !dName || !price) return alert("必填项没写完哦");
                 this.loading = true;
-                const { data: exist } = await _supabase.from('stores').select('*').eq('name', sName).eq('group_code', this.groupCode);
-                if(!exist || exist.length === 0) {
-                    await _supabase.from('stores').insert([{name: sName, location: loc||'附近', group_code: this.groupCode}]);
-                }
-                const { error } = await _supabase.from('dishes').insert([{name: dName, price: parseInt(price), taste: taste||'其他', store_name: sName, group_code: this.groupCode}]);
+                const { data: ex } = await _supabase.from('stores').select('*').eq('name', sName).eq('group_code', this.groupCode);
+                if(!ex || ex.length === 0) await _supabase.from('stores').insert([{name: sName, location: loc||'附近', group_code: this.groupCode}]);
+                await _supabase.from('dishes').insert([{name: dName, price: parseInt(price), taste, store_name: sName, group_code: this.groupCode}]);
                 this.loading = false;
-                if(error) alert("保存失败");
-                else {
-                    alert("✨ 存好啦！");
-                    this.form = { sName: '', dName: '', price: '', taste: '', loc: '' };
-                    this.loadData();
-                }
+                alert("存好啦！");
+                this.form = { sName: '', dName: '', price: '', taste: '其他', loc: '' };
+                this.loadData();
             },
             async handleExcel(e) {
-                const file = e.target.files[0];
-                const reader = new FileReader();
-                reader.onload = async (ev) => {
-                    const workbook = XLSX.read(ev.target.result, {type: 'binary'});
-                    const rows = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]], {header: 1});
+                const f = e.target.files[0];
+                const r = new FileReader();
+                r.onload = async ev => {
+                    const wb = XLSX.read(ev.target.result, {type: 'binary'});
+                    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], {header: 1});
                     rows.shift();
                     this.loading = true;
                     for(let row of rows) {
-                        const [sName, dName, price, taste, loc] = row;
-                        if(!sName) continue;
-                        const { data: exist } = await _supabase.from('stores').select('*').eq('name', sName).eq('group_code', this.groupCode);
-                        if(!exist || exist.length === 0) {
-                            await _supabase.from('stores').insert([{name: sName, location: loc||'附近', group_code: this.groupCode}]);
-                        }
-                        await _supabase.from('dishes').insert([{name: dName, price: parseInt(price)||0, taste: taste||'其他', store_name: sName, group_code: this.groupCode}]);
+                        const [sN, dN, pr, ts, lc] = row;
+                        if(!sN) continue;
+                        const { data: ex } = await _supabase.from('stores').select('*').eq('name', sN).eq('group_code', this.groupCode);
+                        if(!ex || ex.length === 0) await _supabase.from('stores').insert([{name: sN, location: lc||'附近', group_code: this.groupCode}]);
+                        await _supabase.from('dishes').insert([{name: dN, price: parseInt(pr)||0, taste: ts||'其他', store_name: sN, group_code: this.groupCode}]);
                     }
-                    this.loading = false;
-                    alert("导入成功！"); this.loadData();
+                    this.loading = false; alert("导入成功！"); this.loadData();
                 };
-                reader.readAsBinaryString(file);
+                r.readAsBinaryString(f);
             },
             async deleteStore(name) {
                 if(!confirm(`确定删除“${name}”吗？`)) return;
